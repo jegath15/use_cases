@@ -30,7 +30,7 @@ const ChatInterface = () => {
     setIsLoading(true);
 
     try {
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://use-cases-47cp.onrender.com';
+      const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'https://use-cases-47cp.onrender.com').replace(/\/$/, '');
       const response = await axios.post(`${apiBaseUrl}/chat`, {
         message: input,
         role: userRole
