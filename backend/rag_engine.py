@@ -7,12 +7,20 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# We use a local embedding model to ensure it works without additional Azure setup
-# Alternatively, AzureOpenAIEmbeddings could be used if a deployment was provided.
-embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+# Lazy loading for the embedding model to improve startup performance on Render
+_embeddings = None
+
+def get_embeddings():
+    """Lazily initialize and return the embedding model."""
+    global _embeddings
+    if _embeddings is None:
+        print("Loading HuggingFace embedding model (all-MiniLM-L6-v2)...")
+        _embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    return _embeddings
 
 def build_vector_db(pdf_path: str):
     """Load PDF, split text, and create FAISS index."""
+    embeddings = get_embeddings()
     print(f"Loading {pdf_path}...")
     loader = PyPDFLoader(pdf_path)
     docs = loader.load()
@@ -31,6 +39,7 @@ def build_vector_db(pdf_path: str):
 def get_retriever():
     """Load existing index and return a retriever."""
     if os.path.exists("faiss_index"):
+        embeddings = get_embeddings()
         vectorstore = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
         return vectorstore.as_retriever(search_kwargs={"k": 3})
     return None
