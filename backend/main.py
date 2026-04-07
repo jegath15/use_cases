@@ -20,20 +20,34 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Debug prints for credentials
-print(f"DEBUG: Endpoint: {os.getenv('AZURE_OPENAI_ENDPOINT')}")
-print(f"DEBUG: Auth Key (start): {os.getenv('AZURE_OPENAI_API_KEY')[:5]}...")
-print(f"DEBUG: API Version: {os.getenv('AZURE_OPENAI_API_VERSION')}")
-print(f"DEBUG: Model/Deployment Name: {os.getenv('AZURE_OPENAI_MODEL_NAME')}")
+# Debug prints for credentials - Safely handle missing variables
+azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+api_key = os.getenv("AZURE_OPENAI_API_KEY")
+api_version = os.getenv("AZURE_OPENAI_API_VERSION")
+model_name = os.getenv("AZURE_OPENAI_MODEL_NAME")
 
-# Initialize Azure OpenAI Client
-client = AzureOpenAI(
-    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-    api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
-    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
-)
+print(f"DEBUG: Endpoint: {azure_endpoint}")
+print(f"DEBUG: Auth Key Found: {'Yes' if api_key else 'No'}")
+if api_key and len(api_key) > 5:
+    print(f"DEBUG: Auth Key (start): {api_key[:5]}...")
+print(f"DEBUG: API Version: {api_version}")
+print(f"DEBUG: Model/Deployment Name: {model_name}")
 
-MODEL_NAME = os.getenv("AZURE_OPENAI_MODEL_NAME")
+# Initialize Azure OpenAI Client - safely
+client = None
+if api_key and azure_endpoint and api_version:
+    try:
+        client = AzureOpenAI(
+            api_key=api_key,
+            api_version=api_version,
+            azure_endpoint=azure_endpoint
+        )
+    except Exception as e:
+        print(f"Warning: Failed to initialize Azure OpenAI client: {e}")
+else:
+    print("Warning: Missing required environment variables for Azure OpenAI Client.")
+
+MODEL_NAME = model_name
 
 class ChatRequest(BaseModel):
     message: str
@@ -71,8 +85,11 @@ Context:
 """
         
         # Call Azure OpenAI
+        if not client:
+            raise HTTPException(status_code=500, detail="Azure OpenAI client is not initialized. Please check your environment variables.")
+
         response = client.chat.completions.create(
-            model=MODEL_NAME,
+            model=MODEL_NAME if MODEL_NAME else "deployment-missing",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": request.message}
