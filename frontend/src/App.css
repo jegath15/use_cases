@@ -1,0 +1,11 @@
+/* App-specific styles if any, otherwise leave empty as index.css handles the main design */
+.app-container {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
