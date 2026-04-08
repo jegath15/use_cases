@@ -55,3 +55,6 @@ MANIFEST
 
 # Project specifics
 backend/faiss_index/
+backend/chat_history.db
+backend/documents/*.pdf
+!backend/documents/hr_policy.pdf

@@ -42,6 +42,23 @@ body {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
+  transition: all 0.3s ease;
+}
+
+.active-sidebar-item {
+  background: rgba(79, 70, 229, 0.2);
+  border-left: 3px solid #6366f1;
+  transition: all 0.2s ease;
+}
+
+/* RTL Support */
+[dir="rtl"] {
+  text-align: right;
+}
+
+[dir="rtl"] .active-sidebar-item {
+  border-left: none;
+  border-right: 3px solid #6366f1;
 }
 
 /* Animations */
