@@ -31,21 +31,27 @@ def build_vector_db(pdf_path: str):
     from langchain_text_splitters import RecursiveCharacterTextSplitter
     from langchain_community.vectorstores import FAISS
     
-    embeddings = get_embeddings()
-    print(f"Loading {pdf_path}...")
-    loader = PyPDFLoader(pdf_path)
-    docs = loader.load()
-    
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-    splits = text_splitter.split_documents(docs)
-    
-    print(f"Creating vector store from {len(splits)} splits...")
-    vectorstore = FAISS.from_documents(documents=splits, embedding=embeddings)
-    
-    # Save the index locally for persistence
-    vectorstore.save_local("faiss_index")
-    print("Vector store saved to 'faiss_index'")
-    return vectorstore
+    try:
+        embeddings = get_embeddings()
+        print(f"Loading {pdf_path}...")
+        loader = PyPDFLoader(pdf_path)
+        docs = loader.load()
+        
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+        splits = text_splitter.split_documents(docs)
+        
+        print(f"Creating vector store from {len(splits)} splits...")
+        vectorstore = FAISS.from_documents(documents=splits, embedding=embeddings)
+        
+        # Save the index locally for persistence
+        vectorstore.save_local("faiss_index")
+        print("Vector store saved to 'faiss_index'")
+        return vectorstore
+    except Exception as e:
+        print(f"\nCRITICAL WARNING: Failed to build vector database: {e}")
+        print("This usually means your AZURE_OPENAI_EMBEDDING_DEPLOYMENT name is incorrect.")
+        print("RAG features will be disabled until this is fixed, but the server will still start.")
+        return None
 
 def get_retriever():
     """Load existing index and return a retriever."""
