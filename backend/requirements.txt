@@ -10,3 +10,4 @@ pypdf
 python-multipart
 pydantic
 gunicorn
+aiosqlite
