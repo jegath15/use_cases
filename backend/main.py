@@ -113,9 +113,21 @@ Context:
         return ChatResponse(response=ai_message, model=response.model)
         
     except Exception as e:
-        print(f"Error in chat endpoint: {e}")
-        # Explicitly raise as HTTPException to ensure CORS headers are added if needed
-        raise HTTPException(status_code=500, detail=str(e))
+        error_msg = str(e)
+        print(f"CRITICAL ERROR in chat endpoint: {error_msg}")
+        import traceback
+        traceback.print_exc()
+        
+        # Determine if it's an Azure OpenAI specific error
+        detail = f"Backend Error: {error_msg}"
+        if "rate_limit" in error_msg.lower():
+            detail = "Azure OpenAI Rate Limit exceeded. Please wait a moment."
+        elif "authentication" in error_msg.lower():
+            detail = "Azure OpenAI Authentication failed. Check your API Key."
+        elif "not found" in error_msg.lower():
+            detail = f"Azure Deployment '{MODEL_NAME}' not found. Check your deployment name."
+            
+        raise HTTPException(status_code=500, detail=detail)
 
 if __name__ == "__main__":
     import uvicorn

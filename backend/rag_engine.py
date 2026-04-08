@@ -7,15 +7,21 @@ load_dotenv()
 _embeddings = None
 
 def get_embeddings():
-    """Lazily initialize and return the embedding model."""
+    """Lazily initialize and return the Azure OpenAI embedding model."""
     global _embeddings
     if _embeddings is None:
-        # Deferred import of heavy ML libraries
-        print("Importing langchain_community.embeddings...")
-        from langchain_community.embeddings import HuggingFaceEmbeddings
+        print("Initializing AzureOpenAIEmbeddings...")
+        from langchain_openai import AzureOpenAIEmbeddings
         
-        print("Loading HuggingFace embedding model (all-MiniLM-L6-v2)...")
-        _embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        # Use specific embedding deployment or fallback to a common name
+        deployment = os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "text-embedding-ada-002")
+        
+        _embeddings = AzureOpenAIEmbeddings(
+            azure_deployment=deployment,
+            openai_api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview"),
+            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+        )
     return _embeddings
 
 def build_vector_db(pdf_path: str):

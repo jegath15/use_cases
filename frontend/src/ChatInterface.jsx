@@ -42,10 +42,14 @@ const ChatInterface = () => {
         content: response.data.response 
       }]);
     } catch (error) {
+      console.error('Chat Error:', error);
+      const status = error.response?.status;
+      const detail = error.response?.data?.detail || error.message;
+      
       setMessages(prev => [...prev, { 
         id: Date.now() + 1, 
         role: 'assistant', 
-        content: 'Sorry, I encountered an error. Is the backend running?', 
+        content: `Sorry, I encountered an error (${status || 'Network Error'}). ${detail}`, 
         isError: true 
       }]);
     } finally {
