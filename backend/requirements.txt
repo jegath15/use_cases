@@ -10,5 +10,3 @@ pypdf
 python-multipart
 pydantic
 gunicorn
-sentence-transformers
-langchain-huggingface
