@@ -67,7 +67,7 @@ class ChatResponse(BaseModel):
     response: str
     model: str = "Azure OpenAI"
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 async def root():
     return {"message": "HR AI Assistant API is running"}
 
