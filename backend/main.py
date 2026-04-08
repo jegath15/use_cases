@@ -1,9 +1,10 @@
 import os
-from fastapi import FastAPI, HTTPException
+import asyncio
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from openai import AzureOpenAI
+from openai import AsyncAzureOpenAI
 from rag_engine import get_retriever
 
 # Load environment variables
@@ -11,7 +12,7 @@ load_dotenv()
 
 app = FastAPI(title="HR AI Assistant API")
 
-# Add CORS middleware
+# 1. Standard CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,6 +20,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 2. Manual CORS Assurance Middleware (Fail-safe)
+@app.middleware("http")
+async def add_cors_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
 
 # Debug prints for credentials - Safely handle missing variables
 azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
@@ -33,19 +43,19 @@ if api_key and len(api_key) > 5:
 print(f"DEBUG: API Version: {api_version}")
 print(f"DEBUG: Model/Deployment Name: {model_name}")
 
-# Initialize Azure OpenAI Client - safely
+# Initialize Async Azure OpenAI Client - safely
 client = None
 if api_key and azure_endpoint and api_version:
     try:
-        client = AzureOpenAI(
+        client = AsyncAzureOpenAI(
             api_key=api_key,
             api_version=api_version,
             azure_endpoint=azure_endpoint
         )
     except Exception as e:
-        print(f"Warning: Failed to initialize Azure OpenAI client: {e}")
+        print(f"Warning: Failed to initialize Async Azure OpenAI client: {e}")
 else:
-    print("Warning: Missing required environment variables for Azure OpenAI Client.")
+    print("Warning: Missing required environment variables for Async Azure OpenAI Client.")
 
 MODEL_NAME = model_name
 
@@ -69,6 +79,8 @@ async def chat(request: ChatRequest):
         retriever = get_retriever()
         if retriever:
             try:
+                # Use a thread pool for synchronous langchain invoke if needed, 
+                # but currently get_retriever is already lazy and handles it.
                 docs = retriever.invoke(request.message)
                 context = "\n\n".join([doc.page_content for doc in docs])
             except Exception as e:
@@ -84,11 +96,11 @@ Context:
 {context}
 """
         
-        # Call Azure OpenAI
+        # Call Async Azure OpenAI
         if not client:
-            raise HTTPException(status_code=500, detail="Azure OpenAI client is not initialized. Please check your environment variables.")
+            raise HTTPException(status_code=500, detail="Async Azure OpenAI client not initialized.")
 
-        response = client.chat.completions.create(
+        response = await client.chat.completions.create(
             model=MODEL_NAME if MODEL_NAME else "deployment-missing",
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -97,14 +109,16 @@ Context:
         )
         
         ai_message = response.choices[0].message.content
-        print(f"SUCCESS: Received response from Azure OpenAI ({response.model})")
+        print(f"SUCCESS: Received response from Async Azure OpenAI ({response.model})")
         return ChatResponse(response=ai_message, model=response.model)
         
     except Exception as e:
-        print(f"Error calling Azure OpenAI: {e}")
+        print(f"Error in chat endpoint: {e}")
+        # Explicitly raise as HTTPException to ensure CORS headers are added if needed
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
+    # Use the PORT provided by Render
     port = int(os.getenv("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
